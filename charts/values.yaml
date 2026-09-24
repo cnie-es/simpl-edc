@@ -1,0 +1,52 @@
+deployment:
+  # Published image of this fork. Override for builds published elsewhere, e.g.
+  # --set deployment.image=ghcr.io/<owner>/gaia-x-edc-simpl-edc
+  image: "ghcr.io/cnie-es/gaia-x-edc-simpl-edc"
+  # Empty means .Chart.AppVersion. Set it to deploy a specific build, e.g. a commit SHA tag.
+  tag: ""
+  # Names of pre-created image pull secrets. Required while the image is private.
+  pullSecrets: []
+
+resources:
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  limits:
+    cpu: 250m
+    memory: 1Gi
+  requests:
+    cpu: 250m
+    memory: 1Gi
+
+
+ingress:
+  enabled: true
+  apiPath: /api
+  managementPath: /management
+  protocolPath: /protocol
+  publicPath: /public
+  controlPath: /control
+  clusterIssuer: dev-prod
+  corsAllowOrigin: "*"
+
+contractmanager:
+  extension:
+    enabled: false
+  # Single Contract Manager backend, used for both negotiation roles (default).
+  url: http://url:8080/contract/v1/
+  # Optional per-role Contract Manager instances for a single connector talking to two backends.
+  # When set, consumer-type negotiations are signed against consumerUrl and provider-type against
+  # providerUrl. Leave empty to fall back to `url` for both roles.
+  consumerUrl: ""
+  providerUrl: ""
+
+serviceAccount:
+  enabled: true
+
+hashicorp:
+  role: "gaiax"
+  service: "https://vault.tools.simpl-europe.eu/"
+
+secretEngine: kv/gaia-x
+secretConfigPath: "{{ .Values.secretEngine }}/{{ .Release.Namespace }}-simpl-edc"

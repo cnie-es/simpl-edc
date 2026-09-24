@@ -1,0 +1,9 @@
+eu.europa.ec.simpl.policy.service.PolicyFunctionsExtension
+eu.europa.ec.simpl.iam.service.IamExtension
+eu.europa.ec.simpl.contractsign.service.ContractSignCallbackEndpointExtension
+eu.europa.ec.simpl.contractsign.service.SignContractNegotiationPendingGuardExtension
+eu.europa.ec.simpl.provision.s3.S3StsProvisionExtension
+eu.europa.ec.simpl.contractsign.service.PaymentApprovalExtension
+fr.gxfs.edc.extension.s3.MinioCoreExtension
+fr.gxfs.edc.dataplane.minio.MinioDataPlaneExtension
+fr.gxfs.edc.provision.minio.MinioProvisionExtension

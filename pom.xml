@@ -1,0 +1,442 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- Fork coordinates: this derivative work is published under a namespace controlled by
+         CNIE-ES. The upstream namespace eu.europa.ec.simpl is kept only where it correctly
+         identifies a third-party component, never to identify this modified artifact.
+         EUPL-1.2 Art. 5, Legal Protection. -->
+    <groupId>es.cnie.simpl</groupId>
+    <artifactId>simpl-edc</artifactId>
+    <!-- Pinned. Upstream carried ${env.PROJECT_RELEASE_VERSION}, a variable of the GitLab pipeline
+         that is not part of this fork: nothing in the GitHub workflow or the Dockerfile sets it, so
+         the placeholder reached the build unresolved. -->
+    <version>1.0.21-edval</version>
+    <name>simpl-edc (CNIE-ES fork)</name>
+    <description>SIMPL EDC connector - modified version of SIMPL simpl-edc (upstream commit c9368a6), modified by the EDNEL-RIOJA project team for CNIE-ES between 2025-12-11 and 2026-09-11. See NOTICE.EDNEL.md.</description>
+    <url>https://github.com/cnie-es/simpl-edc</url>
+
+    <licenses>
+        <license>
+            <name>European Union Public Licence v. 1.2 (EUPL-1.2)</name>
+            <url>https://eupl.eu/1.2/en/</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>EDNEL-RIOJA project team</name>
+            <organization>CNIE-ES</organization>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:https://github.com/cnie-es/simpl-edc.git</connection>
+        <developerConnection>scm:git:git@github.com:cnie-es/simpl-edc.git</developerConnection>
+        <url>https://github.com/cnie-es/simpl-edc</url>
+    </scm>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <edc>0.10.1</edc>
+        <!-- AWS S3 extensions must stay aligned with the EDC core version (provisioning
+             framework / aws-s3-core SPI compatibility). Do not mix with 0.15.x. -->
+        <awsS3>0.10.1</awsS3>
+        <ionosEdcSimplInfraVersion>1.0.1</ionosEdcSimplInfraVersion>
+        <eclipseGroupId>org.eclipse.edc</eclipseGroupId>
+        <edcForkedRepositoryProjectId>958</edcForkedRepositoryProjectId>
+        <s3PluginForkProjectId>1259</s3PluginForkProjectId>
+        <minio.s3.version>0.0.1</minio.s3.version>
+    </properties>
+
+    <dependencies>
+        <!-- Minio S3 Extension JARs - Now from GitLab Maven Repository -->
+        <dependency>
+            <groupId>fr.gxfs.edc</groupId>
+            <artifactId>minio-s3-core</artifactId>
+            <version>${minio.s3.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>fr.gxfs.edc</groupId>
+            <artifactId>minio-s3-data-plane</artifactId>
+            <version>${minio.s3.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>fr.gxfs.edc</groupId>
+            <artifactId>minio-s3-control-plane</artifactId>
+            <version>${minio.s3.version}</version>
+        </dependency>
+        <!-- Minio client still needed as transitive dependency -->
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>8.6.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.nimbusds</groupId>
+            <artifactId>nimbus-jose-jwt</artifactId>
+            <version>9.47</version>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.36</version>
+        </dependency>
+
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>connector-core</artifactId>
+            <version>forked-1.1.10</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.edc</groupId>
+            <artifactId>keys-lib</artifactId>
+            <version>${edc}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>control-api-configuration</artifactId>
+            <version>${edc}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>control-plane-api</artifactId>
+            <version>${edc}</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>control-plane-api-client</artifactId>
+            <version>${edc}</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>control-plane-core</artifactId>
+            <version>${edc}</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>transaction-local</artifactId>
+            <version>${edc}</version>
+        </dependency>
+
+        <!--postgres dependencies-->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.4</version>
+        </dependency>
+
+        <!--those dependencies are responsible for creating queries and sql script to create given table-->
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>control-plane-sql</artifactId>
+            <version>${edc}</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>sql-pool-apache-commons</artifactId>
+            <version>${edc}</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>edr-index-sql</artifactId>
+            <version>${edc}</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>data-plane-instance-store-sql</artifactId>
+            <version>${edc}</version>
+        </dependency>
+
+        <!--        other edc dependencies-->
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>dsp</artifactId>
+            <version>${edc}</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>configuration-filesystem</artifactId>
+            <version>${edc}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>management-api</artifactId>
+            <version>${edc}</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>edr-store-core</artifactId>
+            <version>${edc}</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>edr-store-receiver</artifactId>
+            <version>${edc}</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>edr-cache-api</artifactId>
+            <version>${edc}</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>data-plane-selector-api</artifactId>
+            <version>${edc}</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>data-plane-selector-core</artifactId>
+            <version>${edc}</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>data-plane-self-registration</artifactId>
+            <version>${edc}</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>data-plane-signaling-api</artifactId>
+            <version>${edc}</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>data-plane-control-api</artifactId>
+            <version>0.8.1</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>data-plane-public-api-v2</artifactId>
+            <version>${edc}</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>data-plane-core</artifactId>
+            <version>${edc}</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>data-plane-iam</artifactId>
+            <version>${edc}</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>token-core</artifactId>
+            <version>${edc}</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>data-plane-http</artifactId>
+            <version>${edc}</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>http</artifactId>
+            <version>${edc}</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>transfer-data-plane-signaling</artifactId>
+            <version>${edc}</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>transfer-pull-http-dynamic-receiver</artifactId>
+            <version>${edc}</version>
+        </dependency>
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>validator-data-address-http-data</artifactId>
+            <version>${edc}</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Standard EDC AmazonS3 extension: destination validator + data plane sink/source.
+             Pinned to ${awsS3} to match the EDC core version. -->
+        <dependency>
+            <groupId>org.eclipse.edc.aws</groupId>
+            <artifactId>validator-data-address-s3</artifactId>
+            <version>${awsS3}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.edc.aws</groupId>
+            <artifactId>data-plane-aws-s3</artifactId>
+            <version>${awsS3}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- aws-s3-core on the compile classpath: our custom STS provisioner
+             (eu.europa.ec.simpl.provision.s3) needs AwsClientProvider / AwsTemporarySecretToken /
+             S3ClientRequest and, transitively, the AWS SDK (sts). We do NOT use the upstream
+             provision-aws-s3 module: on real AWS it requires a single endpoint for S3+IAM+STS,
+             creates a bucket + IAM role per transfer, and its iamAsyncClient NPEs on a null endpoint.
+             Our provisioner instead just assumes a pre-existing role via STS. -->
+        <dependency>
+            <groupId>org.eclipse.edc.aws</groupId>
+            <artifactId>aws-s3-core</artifactId>
+            <version>${awsS3}</version>
+        </dependency>
+
+        <!-- dependencies required for infrastructure deployment -->
+        <dependency>
+            <groupId>com.ionoscloud.edc</groupId>
+            <artifactId>data-plane-edc-simpl-infrastructure</artifactId>
+            <version>{ionosEdcSimplInfraVersion}</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/libs/data-plane-v1.0.1.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>com.ionoscloud.edc</groupId>
+            <artifactId>control-plane-edc-simpl-infrastructure</artifactId>
+            <version>{ionosEdcSimplInfraVersion}</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/libs/control-plane-v1.0.1.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.glassfish</groupId>
+            <artifactId>jakarta.json</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+
+        <!-- MinIO Extensions Dependencies -->
+        <dependency>
+            <groupId>${eclipseGroupId}</groupId>
+            <artifactId>data-plane-util</artifactId>
+            <version>${edc}</version>
+        </dependency>
+
+        <!--        test dependencies-->
+
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>5.14.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>3.26.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
+            <version>5.11.2</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.edc</groupId>
+            <artifactId>jersey-core</artifactId>
+            <version>${edc}</version>
+            <classifier>test-fixtures</classifier>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.edc</groupId>
+            <artifactId>junit</artifactId>
+            <version>${edc}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <version>5.5.0</version>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <!-- Added it in order to remove protobuf-java vulnerability from org.eclipse.edc:keys-lib:0.10.1 .
+    Once EDC version is updated to at least 0.13.0 this dependency can be removed   -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java</artifactId>
+                <version>4.31.1</version>
+            </dependency>
+            <dependency>
+                <!-- Added it in order to remove  vulnerability from org.glassfish.jersey.core:jersey-client@3.1.9 .
+                Once EDC version is updated to at least 0.11.0 and update in minio.s3.version this dependency can
+                be removed   -->
+                <groupId>org.glassfish.jersey.core</groupId>
+                <artifactId>jersey-client</artifactId>
+                <version>3.1.10</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <repositories>
+        <repository>
+            <id>gitlab-maven</id>
+            <!--suppress UnresolvedMavenProperty -->
+            <url>https://code.europa.eu/api/v4/projects/${edcForkedRepositoryProjectId}/packages/maven</url>
+        </repository>
+        <repository>
+            <id>europa-maven</id>
+            <url>https://code.europa.eu/api/v4/projects/${s3PluginForkProjectId}/packages/maven</url>
+        </repository>
+        <repository>
+            <id>central</id>
+            <url>https://repo.maven.apache.org/maven2</url>
+        </repository>
+    </repositories>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>3.5.7</version>
+                <executions>
+                    <execution>
+                        <id>package</id>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>org.eclipse.edc.boot.system.runtime.BaseRuntime</mainClass>
+                        </configuration>
+                    </execution>
+                </executions>
+                <configuration>
+                    <includeSystemScope>true</includeSystemScope>
+                    <finalName>basic-connector</finalName>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.12</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

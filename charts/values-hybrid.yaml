@@ -1,0 +1,94 @@
+# Hybrid connector: a SINGLE connector instance that acts as both CONSUMER and PROVIDER.
+#
+# The image, the connector.jar and the loaded extensions are identical to the consumer/provider
+# deployments — the role is NOT fixed here, it is decided by EDC per negotiation via
+# ContractNegotiation.Type. This values file therefore just gives the instance ONE identity, ONE
+# set of endpoints and ONE database, and expects BOTH roles' credentials to be present in Vault.
+#
+# See documents/deployment-guide.md ("Hybrid deployment") for the Vault/credential requirements.
+
+deployment:
+  label: hybrid
+  callbackAddress: https://edc-hybrid.dev.simpl-europe.eu
+
+# A hybrid uses ONE port set. The 19xxx/29xxx split only existed to co-locate consumer+provider on
+# the same host; the actual numbers carry no semantics. The range below is an arbitrary free choice.
+service:
+  apiPort: 29191
+  controlPort: 29192
+  managementPort: 29193
+  protocolPort: 29194
+  publicPort: 29291
+
+ingress:
+  enabled: true
+  host: edc-hybrid.dev.simpl-europe.eu
+  tlsSecretName: hybrid-simpl-backend-tls
+  corsAllowOrigin: "*"
+
+# it would be better to move those to vault in the future or use sops encryption
+env:
+  # The hybrid has a SINGLE participant identity, used both when it initiates negotiations
+  # (consumer role) and when it answers them (provider role). DSP fully supports one identity
+  # acting in both roles.
+  # If tls.url.participantIdSource is provided then env.edcParticipantId value will be ignored.
+  edcParticipantId: "hybrid"
+  edcIdsId: "urn:connector:hybrid"
+  datasourceurl: jdbc:postgresql://hybrid-edc-postgres.gaiax-edc-dev-hybrid.svc.cluster.local:5432/postgres
+
+postgresql:
+  username: postgres
+
+# Contract Manager (contractsign extension).
+# The ContractAgreementListener branches by negotiation type (consumer -> credentials/agreements on
+# "agreed"; provider -> credentials/agreements on "verified" and agreements/.../status on
+# "finalized"/"terminated"). Each Contract Manager instance is single-role (its spring.mode is fixed at
+# deploy time), so a hybrid connector points each negotiation type at its matching backend:
+#   - consumerUrl -> the instance deployed with MODE=CONSUMER
+#   - providerUrl -> the instance deployed with MODE=PROVIDER
+# Both instances call back to THIS single connector (their EDC_URL), and the /signed callback dispatches
+# correctly by negotiation state/type. contractmanager.apikey is sourced from Vault (key:
+# contractmanager_apikey). If you instead run one backend that serves both roles, drop consumerUrl/
+# providerUrl and set a single `url`.
+contractmanager:
+  extension:
+    enabled: true
+  # Empty so the single-backend fallback is not emitted; the per-role URLs below drive everything.
+  url: ""
+  consumerUrl: https://contract-manager-consumer.dev.simpl-europe.eu/contract/v1
+  providerUrl: https://contract-manager-provider.dev.simpl-europe.eu/contract/v1
+
+tls:
+  url:
+    # Optional: if set, participantId is fetched from the authentication provider and env.edcParticipantId
+    # is ignored (adds the wait-for-participant-id init container). See charts/templates/deployment.yaml.
+    #participantIdSource: http://authentication-provider.hybrid01.svc.cluster.local:8080/v1/credentials
+    authenticationprovider: http://authentication-provider.gaiax-edc-dev-sd.svc.cluster.local:8080
+
+# Set to true to enable remote debugging
+javadebug:
+  enabled: false
+  port: 5007
+
+# ---------------------------------------------------------------------------------------------------
+# Vault requirements for the hybrid (path kv/gaia-x/<namespace>-simpl-edc). A hybrid needs BOTH roles'
+# credentials simultaneously — neither single-role file lists the full set:
+#
+#   Provider role  (S3 sink / data push as source):
+#     fr_gxfs_s3_access_key, fr_gxfs_s3_secret_key, fr_gxfs_s3_endpoint
+#     edc_ionos_access_key, edc_ionos_secret_key, edc_ionos_endpoint, edc_ionos_endpoint_region, edc_ionos_token
+#
+#   Consumer role  (AWS S3-PUSH secured with temporary STS credentials — see documents/deployment-ednel.md):
+#     AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION   (the connector's ambient AWS identity)
+#     edc_aws_provision_sts_role_arn        (pre-existing role to assume; or per-transfer "roleArn")
+#     # edc_aws_provision_role_duration_session_max=3600
+#
+#   Common:
+#     contractmanager_apikey, edc_datasource_default_password, edc_datasource_policy_password, otel_*
+#
+# Use `vault kv patch` (not `put`) to add the AWS keys so the existing keys are not wiped.
+#
+# NOTE — single replica only: SignContractNegotiationPendingGuard keeps signed-contract state in an
+# in-memory HashSet, so the chart's replicas:1 must stay. Do not scale the hybrid horizontally while
+# the contract-sign flow is enabled, or in-flight signatures will be lost / not shared across pods.
+# ---------------------------------------------------------------------------------------------------

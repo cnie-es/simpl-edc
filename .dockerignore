@@ -1,0 +1,26 @@
+.git
+.github
+.tekton
+src
+charts
+argo
+documents
+local
+docker
+libs
+*.md
+*.pdf
+# Los avisos de licencia tienen que entrar en la imagen (EUPL-1.2 Art. 5): verify-image
+# exige /licenses/LICENSE y /licenses/NOTICE.EDNEL.md, y las reglas de arriba los excluian.
+!NOTICE.EDNEL.md
+!CREDITS.pdf
+*.postman_collection.json
+complete-minio-transfer-dev.sh
+complete-minio-transfer.sh
+mvnw
+mvnw.cmd
+pipeline.variables.sh
+pom.xml
+sonar-project.properties
+target/*
+!target/basic-connector.jar
