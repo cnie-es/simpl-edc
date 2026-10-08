@@ -8,7 +8,7 @@ ARG IMAGE_CREATED="1970-01-01T00:00:00Z"
 # to the repository where the complete corresponding source code is available.
 LABEL org.opencontainers.image.title="simpl-edc (CNIE-ES fork)" \
       org.opencontainers.image.description="Modified version of SIMPL simpl-edc v1.0.21 (upstream commit 4acc3ce), modified by the EDNEL-RIOJA project team for CNIE-ES between 2025-12-11 and 2026-09-11. See /licenses/NOTICE.EDNEL.md." \
-      org.opencontainers.image.version="1.0.24-edval" \
+      org.opencontainers.image.version="1.0.22-edval" \
       org.opencontainers.image.vendor="CNIE-ES" \
       org.opencontainers.image.licenses="EUPL-1.2" \
       org.opencontainers.image.source="https://github.com/cnie-es/simpl-edc" \
