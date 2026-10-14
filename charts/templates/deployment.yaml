@@ -151,6 +151,9 @@ spec:
             - name: JAVA_TOOL_OPTIONS
               value: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:{{ .Values.javadebug.port }}"
             {{- end }}
+            {{- with .Values.extraEnvVars }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           ports:
             - containerPort: {{ .Values.service.apiPort | default "29191" }}
               name: api-port
