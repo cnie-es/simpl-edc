@@ -1,3 +1,18 @@
+## 1.0.25-edval (2026-10-21)
+
+### Fixed
+
+- **Heap de la JVM y troceado S3 en el chart**: `jvm.maxRamPercentage` (75 por defecto) y
+  `jvm.opts` en `JAVA_TOOL_OPTIONS`, y bloque `s3` (`sinkChunkSizeMb`, `chunkSizeBytes`,
+  `sessionDurationSeconds`), igual que el EDC del conector interno. Sin ellos la JVM se quedaba
+  con el 25% de `limits.memory` (512 MB con 2Gi) y bufferea el objeto S3 entero: las
+  transferencias en las que el conector es proveedor morian con `OutOfMemoryError: Java heap
+  space`, y el OOM dejaba parado el state machine de negociaciones como proveedor. Visto en el
+  conector externo extchparticipant contra cniestage y cniestage2.
+- `jvm.javaagent` (por defecto el de OpenTelemetry de la imagen): como el chart fija
+  `JAVA_TOOL_OPTIONS`, sustituye a la del Dockerfile, y el `java -jar` del command no carga el agente.
+- `javadebug` deja de ser obligatorio en los values (`default dict`).
+
 ## 1.0.21-edval (2026-09-11)
 
 > Derivative work by the **EDNEL-RIOJA** project team for **CNIE-ES**, based on the upstream

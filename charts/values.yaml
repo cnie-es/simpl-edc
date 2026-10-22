@@ -50,3 +50,27 @@ hashicorp:
 
 secretEngine: kv/gaia-x
 secretConfigPath: "{{ .Values.secretEngine }}/{{ .Release.Namespace }}-simpl-edc"
+
+# La JVM, sin esto, se queda con el 25% de limits.memory (MaxRAMPercentage por defecto):
+# con 2Gi son 512 MB de heap y las transferencias S3 grandes mueren con
+# OutOfMemoryError. Se inyecta como -XX:MaxRAMPercentage dentro de JAVA_TOOL_OPTIONS.
+# Mismo valor que el EDC del conector interno (Gaia-X-EDC/simpl-edc/edc).
+jvm:
+  # El de la imagen (ENV JAVA_TOOL_OPTIONS del Dockerfile), que esta JAVA_TOOL_OPTIONS sustituye.
+  # Vacio para no cargar el agente de OpenTelemetry.
+  javaagent: /otel/opentelemetry-javaagent.jar
+  maxRamPercentage: 75
+  # Opciones JVM libres, en la MISMA JAVA_TOOL_OPTIONS. Ej: "-XX:+ExitOnOutOfMemoryError"
+  opts: ""
+
+# Troceado multipart de las transferencias S3. Sin limites el data plane bufferea el
+# objeto COMPLETO en memoria antes de subirlo; con ellos la huella es ~un chunk.
+# 64 MB permite objetos de hasta 640 GB (10.000 partes por multipart).
+# sessionDurationSeconds: el STS de la transferencia caduca a la hora por defecto y un
+# multipart mas largo no se puede reanudar; 43200 = 12 h.
+# Poner cualquiera a null para no emitir esa variable y dejar el default del EDC.
+s3:
+  sinkChunkSizeMb: 64
+  # Entre comillas: sin ellas Helm lo renderiza como "6.7108864e+07" y el EDC no lo parsea.
+  chunkSizeBytes: "67108864"
+  sessionDurationSeconds: 43200

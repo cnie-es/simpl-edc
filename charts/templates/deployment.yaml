@@ -147,9 +147,50 @@ spec:
               value: {{ .Values.contractmanager.providerUrl }}
             {{- end }}
             {{- end }}
-            {{- if .Values.javadebug.enabled }}
+            {{- /* JAVA_TOOL_OPTIONS se monta como lista para que javadebug y jvm no se pisen.
+                   Sustituye a la de la imagen, que solo trae el -javaagent de OpenTelemetry. El
+                   command de abajo (java -jar) no lo carga, asi que jvm.javaagent lo repite para
+                   no perderlo.
+
+                   jvm.maxRamPercentage: sin el, la JVM se queda con el 25% de limits.memory
+                   (512 MB de heap con 2Gi). El data plane bufferea el objeto S3 y las
+                   transferencias como PROVEEDOR mueren con OutOfMemoryError: Java heap space;
+                   ademas el OOM puede tumbar el state machine de negociaciones, que deja de
+                   avanzar hasta reiniciar el pod. */}}
+            {{- $jvmOpts := list }}
+            {{- $javadebug := .Values.javadebug | default dict }}
+            {{- if $javadebug.enabled }}
+            {{- $jvmOpts = append $jvmOpts (printf "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:%v" $javadebug.port) }}
+            {{- end }}
+            {{- $jvm := .Values.jvm | default dict }}
+            {{- if $jvm.javaagent }}
+            {{- $jvmOpts = append $jvmOpts (printf "-javaagent:%s" $jvm.javaagent) }}
+            {{- end }}
+            {{- if $jvm.maxRamPercentage }}
+            {{- $jvmOpts = append $jvmOpts (printf "-XX:MaxRAMPercentage=%v" $jvm.maxRamPercentage) }}
+            {{- end }}
+            {{- if $jvm.opts }}
+            {{- $jvmOpts = append $jvmOpts $jvm.opts }}
+            {{- end }}
+            {{- if $jvmOpts }}
             - name: JAVA_TOOL_OPTIONS
-              value: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:{{ .Values.javadebug.port }}"
+              value: {{ join " " $jvmOpts | quote }}
+            {{- end }}
+            {{- /* Troceado multipart de S3. Nombres con puntos a proposito: van como env de k8s y
+                   no pasan por el config.txt de Vault, que los rechazaria como identificadores
+                   de bash. */}}
+            {{- $s3 := .Values.s3 | default dict }}
+            {{- if not (kindIs "invalid" $s3.sinkChunkSizeMb) }}
+            - name: edc.dataplane.aws.sink.chunk.size.mb
+              value: "{{ $s3.sinkChunkSizeMb }}"
+            {{- end }}
+            {{- if not (kindIs "invalid" $s3.chunkSizeBytes) }}
+            - name: edc.aws.s3.chunk.size.bytes
+              value: "{{ $s3.chunkSizeBytes }}"
+            {{- end }}
+            {{- if not (kindIs "invalid" $s3.sessionDurationSeconds) }}
+            - name: edc.aws.s3.session.duration.seconds
+              value: "{{ $s3.sessionDurationSeconds }}"
             {{- end }}
             {{- with .Values.extraEnvVars }}
             {{- toYaml . | nindent 12 }}
